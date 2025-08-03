@@ -1,9 +1,11 @@
 {
-  "name": "claude",
+  "name": "beauty-backend",
   "version": "1.0.0",
-  "description": "",
+  "type": "module",
+  "description": "Simple skin analyzer backend",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
