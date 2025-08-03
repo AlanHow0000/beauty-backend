@@ -1,10 +1,38 @@
+// index.js
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import fetch from "node-fetch";
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// CORS middleware
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
+app.use(bodyParser.json({ limit: "10mb" }));
+
+// Explicit OPTIONS handler (safe redundancy)
+app.options("/analyze", (req, res) => {
+  res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  return res.sendStatus(204);
+});
+
 app.post("/analyze", async (req, res) => {
-  console.log("Claude key present?", !!process.env.CLAUDE_API_KEY); // debug line
+  console.log("Claude key present?", !!process.env.CLAUDE_API_KEY);
   const { image } = req.body;
   if (!image) return res.status(400).json({ error: "No image provided" });
 
   const claudeApiKey = process.env.CLAUDE_API_KEY;
   if (!claudeApiKey) {
+    // fallback demo
     return res.json({
       reply: "Skin looks slightly dry with some redness. Recommend hydrating treatment.",
       treatment: "HydraGlow Facial",
@@ -13,7 +41,7 @@ app.post("/analyze", async (req, res) => {
 
   try {
     const prompt = `
-You are a skincare assistant. Analyze the user’s skin based on the provided image data (base64).
+You are a skincare assistant. Analyze the user's skin from the provided image data (base64).
 Give a concise diagnosis and a recommended treatment. Respond in strict JSON with keys "reply" and "treatment".
 Image snippet: ${image.slice(0, 100)}...
 `;
@@ -22,9 +50,7 @@ Image snippet: ${image.slice(0, 100)}...
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Try Authorization header first; if that fails, swap to x-api-key
-        "Authorization": `Bearer ${claudeApiKey}`,
-        // "x-api-key": claudeApiKey,
+        "Authorization": `Bearer ${claudeApiKey}`, // if this doesn't work, switch to "x-api-key": claudeApiKey
       },
       body: JSON.stringify({
         model: "claude-2",
@@ -41,7 +67,7 @@ Image snippet: ${image.slice(0, 100)}...
     }
 
     const data = await claudeResponse.json();
-    console.log("Claude raw response:", data); // inspect shape
+    console.log("Claude raw response:", data);
 
     let rawText = "";
     if (data.completion) {
@@ -62,7 +88,7 @@ Image snippet: ${image.slice(0, 100)}...
       reply = parsed.reply || reply;
       treatment = parsed.treatment || treatment;
     } catch {
-      reply = rawText;
+      reply = rawText; // fallback to raw text
     }
 
     return res.json({ reply, treatment });
@@ -73,4 +99,8 @@ Image snippet: ${image.slice(0, 100)}...
       treatment: "HydraGlow Facial",
     });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
